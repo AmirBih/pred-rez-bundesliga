@@ -4,6 +4,11 @@ import tensorflow as tf
 from sklearn.preprocessing import StandardScaler, LabelEncoder, OneHotEncoder
 import pandas as pd
 import pickle
+import streamlit.components.v1 as components
+
+#ucitavanje dva csv-a za forme timova (h i a):
+forma_h = pd.read_csv("forma_h.csv")
+forma_a = pd.read_csv("forma_a.csv")
 
 #ucitavanje modela
 model = tf.keras.models.load_model("BL_float_model.h5")
@@ -35,6 +40,7 @@ def opcija(opc):
 domacin = st.selectbox("Domacin", onehot_encoder_domacin.categories_[0] ,format_func= opcija)
 gost = st.selectbox("Gost", onehot_encoder_gost.categories_[0] ,format_func= opcija)
 
+
 #Domacin i Gost da ne budu iste ekipe:
 if domacin == gost:
     st.warning("Domacin i gost moraju biti različiti.")
@@ -48,6 +54,50 @@ if domacin in iskljuciti:
 if gost in iskljuciti:
     st.warning("Odabrani Gost Onemogućen.")
     st.stop()
+
+#Domacin - prikazi formu
+forma_domacin = forma_h[forma_h["Klub"] == domacin]["Rezultat"].values[0]
+
+#Domacin - Odredi boju na osnovu vrednosti
+if forma_domacin > 0.40:
+    color1 = '#28B463' #Zelena '#28B463' 
+elif forma_domacin > 0.19:
+    color1 = "#98FB98" #Svijetlo zelena
+elif forma_domacin < -0.40: 
+    color1 = "#C82333"  # Crvena '#FF5733' 
+elif forma_domacin < -0.19:
+    color1 = "#FFB6C1" #Svijetlo crvena
+else:
+    color1 = '#D3D3D3'
+
+# Prikaz vrednosti sa obojenim krugom
+st.write(f"Forma {domacin}: {forma_domacin}")
+components.html(f"""
+<div style='display: inline-block; width: 35px; height: 35px; background-color: {color1}; border-radius: 50%;'></div>
+""", height=50)
+
+
+#Gost
+forma_gost = forma_a[forma_a["Klub"] == gost]["Rezultat"].values[0]
+
+#Gost - Odredi boju na osnovu vrednosti
+if forma_gost > 0.40:
+    color1 = "#C82333" # Crvena '#FF5733 
+elif forma_gost > 0.19:
+    color1 = "#FFB6C1" #Svijetlo crvena
+elif forma_gost < -0.40:
+    color1 = '#28B463'  #Zelena '#28B463' 
+elif forma_gost < -0.19:
+    color1 = "#98FB98" #Svijetlo zelena
+else:
+    color1 = '#D3D3D3'
+
+
+# Prikaz vrednosti sa obojenim krugom
+st.write(f" Forma {gost}: {forma_gost} (invertovan broj) ")
+components.html(f"""
+<div style='display: inline-block; width: 35px; height: 35px; background-color: {color1}; border-radius: 50%;'></div>
+""", height=50)
 
 #pripremanje podataka za unos
 unos_data = pd.DataFrame({
@@ -76,10 +126,10 @@ predvidjanje = model.predict(unos_data_skaliran)
 predvidjanje_pobjednika = predvidjanje[0][0]
 
 
-sentimentalnost = (f"Pobjednik **{domacin}**") if predvidjanje[0][0] >0.55 else (f"Pobjednik **{gost}**") if predvidjanje[0][0] < -0.55 else "Pobjednik Neizvjestan"
-st.write(sentimentalnost)
-
 st.info(f'Rezultat Predviđanja: {predvidjanje_pobjednika:.2f}')
+
+sentimentalnost = (f"Pobjednik **{domacin}**") if predvidjanje[0][0] >0.55 else (f"Pobjednik **{gost}**") if predvidjanje[0][0] < -0.55 else "Pobjednik Neizvjestan"
+st.info(sentimentalnost)
 
 
 #Bila su 2 Problema: 1-Previdio sam pisanje koda i izostavio "_" posle "...categories"
